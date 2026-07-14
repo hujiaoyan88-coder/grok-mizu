@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>みずみず - 水トラッカー</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="data:application/manifest+json,{
+    &quot;name&quot;:&quot;みずみず&quot;,
+    &quot;short_name&quot;:&quot;みずみず&quot;,
+    &quot;start_url&quot;:&quot;.&quot;,
+    &quot;display&quot;:&quot;standalone&quot;,
+    &quot;background_color&quot;:&quot;#fdf2f8&quot;,
+    &quot;theme_color&quot;:&quot;#ec4899&quot;,
+    &quot;icons&quot;:[{&quot;src&quot;:&quot;https://picsum.photos/id/1015/192/192&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;}]
+  }">
+  <style>
+    .water-drop {
+      animation: drip 2s infinite;
+    }
+    @keyframes drip {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(8px); }
+    }
+    .progress-circle {
+      transition: stroke-dashoffset 0.5s ease;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-pink-50 to-sky-50 min-h-screen flex items-center justify-center p-4">
+
+  <div class="max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden">
+
+    <!-- ヘッダー -->
+    <div class="bg-pink-500 text-white p-6 text-center">
+      <div class="flex justify-center mb-2">
+        <span class="text-6xl water-drop">💧</span>
+      </div>
+      <h1 class="text-3xl font-bold">みずみず</h1>
+      <p class="text-pink-100 mt-1">今日もきれいに、みずみずしく</p>
+    </div>
+
+    <div class="p-8">
+
+      <!-- 進捗サークル -->
+      <div class="relative w-48 h-48 mx-auto mb-8">
+        <svg class="w-full h-full -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#f3e8ff" stroke-width="12"/>
+          <circle id="progress" cx="60" cy="60" r="52" fill="none" 
+                  stroke="#22d3ee" stroke-width="12" stroke-dasharray="326.73"
+                  stroke-dashoffset="326.73" stroke-linecap="round"/>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span id="cups" class="text-6xl font-bold text-pink-600">0</span>
+          <span class="text-sm text-gray-500 -mt-2">/ 8杯</span>
+          <span id="ml" class="text-xl font-medium text-cyan-600 mt-1">0 ml</span>
+        </div>
+      </div>
+
+      <!-- 追加ボタン -->
+      <div class="grid grid-cols-2 gap-4 mb-8">
+        <button onclick="addWater(1)" 
+                class="bg-cyan-100 hover:bg-cyan-200 text-cyan-700 py-6 rounded-3xl text-xl font-medium active:scale-95 transition">
+          + 1杯
+        </button>
+        <button onclick="addWater(2)" 
+                class="bg-pink-100 hover:bg-pink-200 text-pink-700 py-6 rounded-3xl text-xl font-medium active:scale-95 transition">
+          + 2杯
+        </button>
+      </div>
+
+      <!-- リセット & 履歴 -->
+      <div class="flex gap-3">
+        <button onclick="resetToday()" 
+                class="flex-1 py-4 text-sm border border-gray-300 rounded-2xl hover:bg-gray-50">
+          今日の記録をリセット
+        </button>
+        <button onclick="showHistory()" 
+                class="flex-1 py-4 text-sm bg-gray-100 rounded-2xl hover:bg-gray-200">
+          過去7日間
+        </button>
+      </div>
+    </div>
+
+    <!-- フッター -->
+    <div class="text-center py-6 text-xs text-gray-400">
+      1杯 = 250ml として計算しています
+    </div>
+  </div>
+
+  <script>
+    let todayCups = 0;
+    const GOAL = 8;
+    const CUP_ML = 250;
+
+    function loadData() {
+      const saved = localStorage.getItem('waterTracker');
+      if (saved) {
+        const data = JSON.parse(saved);
+        const today = new Date().toISOString().slice(0,10);
+        if (data.date === today) {
+          todayCups = data.cups || 0;
+        }
+      }
+      updateUI();
+    }
+
+    function saveData() {
+      const today = new Date().toISOString().slice(0,10);
+      localStorage.setItem('waterTracker', JSON.stringify({
+        date: today,
+        cups: todayCups
+      }));
+    }
+
+    function updateUI() {
+      document.getElementById('cups').textContent = todayCups;
+      document.getElementById('ml').textContent = (todayCups * CUP_ML) + " ml";
+      
+      const progress = document.getElementById('progress');
+      const percent = Math.min(todayCups / GOAL, 1);
+      const offset = 326.73 * (1 - percent);
+      progress.style.strokeDashoffset = offset;
+    }
+
+    function addWater(num) {
+      todayCups = Math.min(GOAL, todayCups + num);
+      updateUI();
+      saveData();
+      
+      // 達成おめでとう演出
+      if (todayCups === GOAL) {
+        setTimeout(() => {
+          alert("🎉 今日の目標達成！\nキレイな自分、ありがとう♡");
+        }, 300);
+      }
+    }
+
+    function resetToday() {
+      if (confirm("今日の記録をリセットしますか？")) {
+        todayCups = 0;
+        updateUI();
+        saveData();
+      }
+    }
+
+    function showHistory() {
+      alert("過去の記録機能は次回追加するね！\n今は今日の記録だけ保存されてるよ♡");
+    }
+
+    // 初期化
+    window.onload = loadData;
+  </script>
+</body>
+</html>
